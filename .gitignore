@@ -1,0 +1,14 @@
+# Ignore environment variables
+.env
+
+# Ignore python cache files
+__pycache__/
+*.pyc
+
+# Ignore VLC/HLS segments and playlists
+static/hls/*.ts
+static/hls/*.m3u8
+
+# Ignore local server task logs
+*.log
+.system_generated/

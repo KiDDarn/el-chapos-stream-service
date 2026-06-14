@@ -1,0 +1,259 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>El Chapo's Stream Service - Real-time Desktop Streaming</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;800&family=Plus+Jakarta+Sans:wght@300;400;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/static/app.css">
+  <!-- Include WebRTC Adapter for cross-browser support -->
+  <script src="https://webrtc.github.io/adapter/adapter-latest.js"></script>
+  <!-- Include hls.js for playing VLC Player HLS streams -->
+  <script src="https://cdn.jsdelivr.net/npm/hls.js@latest/dist/hls.min.js"></script>
+</head>
+<body>
+  <div class="glass-bg-container">
+    <div class="glow-orb orb-1"></div>
+    <div class="glow-orb orb-2"></div>
+  </div>
+
+  <div class="app-container">
+    <header class="app-header">
+      <div class="logo">
+        <span class="logo-icon">⚡</span>
+        <span class="logo-text">El Chapo's <span class="accent-text">Stream Service</span></span>
+      </div>
+      <div id="connection-badge" class="badge badge-disconnected">
+        <span class="badge-dot"></span>
+        <span id="badge-text">Disconnected</span>
+      </div>
+    </header>
+
+    <main class="main-content">
+      <!-- Password Protection View -->
+      <section id="view-login" class="card fade-in hidden">
+        <div class="hero-section">
+          <h1>Password Protected <br><span class="gradient-text">Stream Room</span></h1>
+          <p>Please enter the access password to unlock El Chapo's Stream Service.</p>
+        </div>
+        
+        <div class="mode-card" style="max-width: 400px; margin: 0 auto; gap: 1rem;">
+          <input type="password" id="login-password-input" placeholder="Enter Password" autocomplete="off" style="width: 100%; border-radius: 12px; background: rgba(0, 0, 0, 0.25); border: 1px solid var(--border-color); padding: 0.875rem 1.25rem; color: var(--text-main); font-size: 0.95rem; outline: none;">
+          <button class="btn btn-primary" id="btn-login-submit" style="width: 100%;">Unlock Stream</button>
+          <p id="login-error-msg" class="hidden" style="color: var(--danger-color); font-size: 0.85rem; margin-top: 0.5rem;"></p>
+        </div>
+      </section>
+
+      <!-- Mode Selection View -->
+      <section id="view-selection" class="card fade-in hidden">
+        <div class="hero-section">
+          <h1>Stream Your Desktop <br><span class="gradient-text">In Ultra-Low Latency</span></h1>
+          <p>Zero-lag screen sharing directly in your browser. Powered by WebRTC P2P technology.</p>
+        </div>
+
+        <div class="mode-options">
+          <div class="mode-card" id="mode-streamer-btn">
+            <div class="card-icon">📤</div>
+            <h3>Share Your Screen</h3>
+            <p>Start broadcasting your desktop, a specific window, or browser tab instantly.</p>
+            <button class="btn btn-primary" id="btn-init-streamer">Start Streaming</button>
+          </div>
+
+          <div class="mode-card" id="mode-viewer-btn">
+            <div class="card-icon">📺</div>
+            <h3>Join a Stream</h3>
+            <p>Enter a room code to watch someone else's desktop stream in real-time.</p>
+            <div class="input-group">
+              <input type="text" id="join-room-input" placeholder="Enter Room Code" autocomplete="off" maxlength="10">
+              <button class="btn btn-secondary" id="btn-init-viewer">Join Room</button>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Streamer View -->
+      <section id="view-streamer" class="card hidden">
+        <div class="view-header">
+          <button class="btn btn-back" id="btn-streamer-back">← Back</button>
+          <h2>Broadcaster Dashboard</h2>
+        </div>
+
+        <div class="dashboard-grid">
+          <div class="video-panel">
+            <div class="video-wrapper">
+              <video id="streamer-preview" autoplay playsinline muted></video>
+              <div class="video-overlay" id="streamer-placeholder">
+                <span class="overlay-icon">🖥️</span>
+                <p>No active capture device</p>
+                
+                <div class="select-container" style="margin-bottom: 0.5rem;">
+                  <select id="streamer-source-select" style="background: rgba(26, 31, 46, 0.9); border: 1px solid var(--border-color); color: var(--text-main); padding: 0.5rem 1rem; border-radius: 8px; font-family: var(--font-family-sans); cursor: pointer; outline: none;">
+                    <option value="screen">Desktop / Application Screen</option>
+                    <option value="webcam">Web Camera & Microphone</option>
+                  </select>
+                </div>
+                
+                <button class="btn btn-primary" id="btn-start-capture">Share Stream</button>
+              </div>
+            </div>
+            
+            <div class="controls-row">
+              <button class="btn btn-danger hidden" id="btn-stop-capture">Stop Sharing</button>
+              <div class="status-indicator">
+                <span class="pulse-dot hidden" id="stream-pulse"></span>
+                <span id="stream-status-text">Status: Idle</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="info-panel">
+            <div class="info-group">
+              <label>Room Code</label>
+              <div class="room-share-box">
+                <span id="streamer-room-code" class="room-code-display">------</span>
+                <button class="btn btn-small" id="btn-copy-link">Copy Link</button>
+              </div>
+            </div>
+
+            <div class="stats-box">
+              <h4>Active Viewers</h4>
+              <div class="viewer-count" id="active-viewer-count">0</div>
+              <p class="stats-hint">Share the room code or link to let others join your stream.</p>
+            </div>
+
+            <!-- Broadcaster Chat Box -->
+            <div class="chat-box stats-box">
+              <h4>Live Room Chat</h4>
+              
+              <div class="nickname-control" style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.75rem; font-size: 0.85rem; color: var(--text-muted);">
+                <label for="streamer-nickname-input" style="font-weight: 600;">Chat Name:</label>
+                <input type="text" id="streamer-nickname-input" value="Host" placeholder="Host" maxlength="15" style="background: rgba(0, 0, 0, 0.2); border: 1px solid var(--border-color); border-radius: 6px; padding: 0.25rem 0.5rem; color: var(--text-main); font-size: 0.85rem; outline: none; width: 100px;">
+              </div>
+
+              <div class="chat-messages" id="streamer-chat-messages">
+                <div class="chat-msg system">System: Stream room created. Welcome to the chat!</div>
+              </div>
+              
+              <div class="chat-input-group">
+                <input type="text" id="streamer-chat-input" placeholder="Type message and press Enter..." autocomplete="off">
+                <button class="btn btn-small btn-primary" id="btn-streamer-chat-send">Send</button>
+              </div>
+            </div>
+
+            <div class="help-box">
+              <h4>How it works</h4>
+              <ul>
+                <li>Select <strong>Desktop</strong> or <strong>Web Camera</strong>, then click <strong>Share Stream</strong>.</li>
+                <li><strong>Sound Share:</strong> To share desktop audio, select the <em>Entire Screen</em> or <em>Browser Tab</em> option, and check the <strong>"Share audio"</strong> box in the browser prompt.</li>
+                <li>Copy the stream link and share it.</li>
+                <li>Keep this tab open to maintain the broadcast.</li>
+              </ul>
+            </div>
+            
+            <!-- VLC Streaming Help Section -->
+            <details class="help-box" style="margin-top: 1rem; cursor: pointer; background: rgba(14, 165, 233, 0.03); border: 1px solid rgba(14, 165, 233, 0.1);">
+              <summary style="font-weight: 600; color: #38bdf8; list-style: none; display: flex; justify-content: space-between; align-items: center;">
+                <span>📖 How to stream from VLC Player</span>
+                <span style="font-size: 0.8rem;">[Click to Expand]</span>
+              </summary>
+              <div style="margin-top: 0.75rem; display: flex; flex-direction: column; gap: 0.5rem;">
+                <p style="font-size: 0.85rem; color: var(--text-muted);">You can stream high-quality files directly from your VLC media player onto the server using this shell command:</p>
+                <pre style="background: rgba(0,0,0,0.3); padding: 0.75rem; border-radius: 8px; font-family: monospace; font-size: 0.725rem; overflow-x: auto; color: #38bdf8; border: 1px solid var(--border-color); line-height: 1.4;"><code style="white-space: pre-wrap; word-break: break-all;">vlc your-media-file.mp4 --sout="#transcode{vcodec=h264,vb=2000,acodec=mpga,ab=128,channels=2,samplerate=44100}:std{access=livehttp{seglen=4,delsegs=true,numsegs=5,index=/home/m4p3/webrtc-stream-app/static/hls/stream.m3u8,index-url=/hls/stream-########.ts},mux=ts,dst=/home/m4p3/webrtc-stream-app/static/hls/stream-########.ts}"</code></pre>
+                <p style="font-size: 0.8rem; color: var(--text-muted); font-style: italic;">Note: Once VLC starts streaming, viewers will get a button to switch automatically to the high-quality VLC feed.</p>
+              </div>
+            </details>
+            
+            <!-- Linux System Audio Share Section -->
+            <details class="help-box" style="margin-top: 1rem; cursor: pointer; background: rgba(16, 185, 129, 0.03); border: 1px solid rgba(16, 185, 129, 0.1);">
+              <summary style="font-weight: 600; color: #10b981; list-style: none; display: flex; justify-content: space-between; align-items: center;">
+                <span>🎙️ How to share System Audio on Linux</span>
+                <span style="font-size: 0.8rem;">[Click to Expand]</span>
+              </summary>
+              <div style="margin-top: 0.75rem; display: flex; flex-direction: column; gap: 0.5rem; font-size: 0.85rem; color: var(--text-muted);">
+                <p>To capture and stream all desktop audio (including application sounds) into your stream on Linux:</p>
+                <ol style="margin-left: 1.25rem; display: flex; flex-direction: column; gap: 0.35rem;">
+                  <li>Run this command in a terminal to create a virtual input device monitoring your speaker/headphones output:
+                    <pre style="background: rgba(0,0,0,0.3); padding: 0.5rem; border-radius: 6px; font-family: monospace; font-size: 0.725rem; overflow-x: auto; color: #10b981; border: 1px solid var(--border-color); margin-top: 0.25rem;"><code style="white-space: pre-wrap;">pactl load-module module-remap-source master=$(pactl get-default-sink).monitor source_name=virtual_system_audio source_properties=device.description="System_Audio_Mix"</code></pre>
+                  </li>
+                  <li>In the dashboard, set <strong>Capture Source</strong> to <em>Web Camera & Microphone</em>, and click <strong>Share Stream</strong>.</li>
+                  <li>When the browser requests camera/microphone permissions, choose <strong>"System_Audio_Mix"</strong> as your microphone source.</li>
+                </ol>
+              </div>
+            </details>
+          </div>
+        </div>
+      </section>
+
+      <!-- Viewer View -->
+      <section id="view-viewer" class="card hidden">
+        <div class="view-header">
+          <button class="btn btn-back" id="btn-viewer-back">← Back</button>
+          <h2>Watching: <span id="viewer-room-title" class="gradient-text">Room Name</span> <span id="viewer-stream-type-badge" style="font-size: 0.8rem; opacity: 0.7; font-weight: normal; margin-left: 0.5rem;">(WebRTC)</span></h2>
+        </div>
+
+        <div class="dashboard-grid">
+          <div class="video-panel">
+            <div class="video-wrapper">
+              <video id="viewer-video" autoplay playsinline muted></video>
+              <div class="video-overlay" id="viewer-placeholder">
+                <span class="overlay-icon animate-pulse">📡</span>
+                <p id="viewer-placeholder-text">Connecting to host...</p>
+              </div>
+            </div>
+            
+            <div class="controls-row">
+              <div class="viewer-controls">
+                <button class="btn btn-secondary" id="btn-fullscreen">Fullscreen</button>
+                <button class="btn btn-secondary" id="btn-toggle-sound">Unmute Audio</button>
+                <button class="btn btn-secondary hidden" id="btn-toggle-source-type">Switch to VLC Stream</button>
+                <div class="volume-control-group">
+                  <span class="volume-icon">🔊</span>
+                  <input type="range" id="viewer-volume-bar" min="0" max="100" value="80" step="1">
+                  <span id="viewer-volume-value" class="volume-label">80%</span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="info-panel">
+            <!-- Viewer Chat Box -->
+            <div class="chat-box stats-box">
+              <h4>Live Room Chat</h4>
+
+              <div class="nickname-control" style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.75rem; font-size: 0.85rem; color: var(--text-muted);">
+                <label for="viewer-nickname-input" style="font-weight: 600;">Chat Name:</label>
+                <input type="text" id="viewer-nickname-input" placeholder="Change Nickname" maxlength="15" style="background: rgba(0, 0, 0, 0.2); border: 1px solid var(--border-color); border-radius: 6px; padding: 0.25rem 0.5rem; color: var(--text-main); font-size: 0.85rem; outline: none; width: 120px;">
+              </div>
+
+              <div class="chat-messages" id="viewer-chat-messages">
+                <div class="chat-msg system">System: Connected to the stream room. Chat is active.</div>
+              </div>
+              <div class="chat-input-group">
+                <input type="text" id="viewer-chat-input" placeholder="Type message and press Enter..." autocomplete="off">
+                <button class="btn btn-small btn-primary" id="btn-viewer-chat-send">Send</button>
+              </div>
+            </div>
+
+            <div class="help-box">
+              <h4>Viewer Tips</h4>
+              <ul>
+                <li>Use the slider to adjust audio volume.</li>
+                <li>Go fullscreen for the best viewing experience.</li>
+                <li>Participate in the live chat with the broadcaster and other viewers!</li>
+              </ul>
+            </div>
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <footer class="app-footer">
+      <p>El Chapo's Stream Service - P2P WebRTC technology for latency-free desktop capture.</p>
+    </footer>
+  </div>
+
+  <script src="/static/app.js"></script>
+</body>
+</html>
