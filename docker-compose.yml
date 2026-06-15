@@ -1,23 +1,23 @@
-version: '3.8'
+version: "3.8"
 
 services:
-  m4p3-stream:
+  app-stream:
     build: .
-    container_name: m4p3-stream
+    container_name: app-stream
     restart: unless-stopped
     ports:
       - "8095:8095" # Accessible locally at http://localhost:8095
     labels:
       - "traefik.enable=true"
       # HTTP Rules (Replace 'stream.yourdomain.com' with your actual domain name)
-      - "traefik.http.routers.m4p3-stream.rule=Host(`stream.yourdomain.com`)"
-      - "traefik.http.routers.m4p3-stream.entrypoints=websecure"
-      - "traefik.http.routers.m4p3-stream.tls=true"
+      - "traefik.http.routers.app.rule=Host(`stream.yourdomain.com`)"
+      - "traefik.http.routers.app.entrypoints=websecure"
+      - "traefik.http.routers.app.tls=true"
       # Uncomment and update the cert resolver name to match your Traefik Let's Encrypt config:
-      # - "traefik.http.routers.m4p3-stream.tls.certresolver=letsencrypt"
-      
+      # - "traefik.http.routers.app.tls.certresolver=letsencrypt"
+
       # Tell Traefik to route to port 8095
-      - "traefik.http.services.m4p3-stream.loadbalancer.server.port=8095"
+      - "traefik.http.services.app.loadbalancer.server.port=8095"
     networks:
       - traefik-public # The network shared with your Traefik proxy container
 

@@ -32,8 +32,8 @@ if env_path.exists():
 # Rooms configuration: room_id -> { "streamer": WebSocket, "viewers": { viewer_id: WebSocket } }
 rooms: Dict[str, Dict] = {}
 
-# Password Protection (set via env var, defaults to 'm4p3')
-STREAM_PASSWORD = os.getenv("STREAM_PASSWORD", "m4p3")
+# Password Protection (set via env var, defaults to 'stream')
+STREAM_PASSWORD = os.getenv("STREAM_PASSWORD", "stream")
 
 class LoginRequest(BaseModel):
     password: str

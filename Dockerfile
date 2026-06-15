@@ -1,4 +1,4 @@
-# Dockerfile for m4p3-Stream
+# Dockerfile for app-stream
 FROM python:3.11-slim
 
 WORKDIR /app
